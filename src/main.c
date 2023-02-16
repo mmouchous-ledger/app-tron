@@ -739,6 +739,8 @@ typedef enum {
     APPROVAL_FREEZEASSET_TRANSACTION,
     APPROVAL_UNFREEZEASSET_TRANSACTION,
     APPROVAL_WITHDRAWBALANCE_TRANSACTION,
+    APPROVAL_DELEGATE_RESOURCE_TRANSACTION,
+    APPROVAL_UNDELEGATE_RESOURCE_TRANSACTION,
     APPROVAL_SIGN_PERSONAL_MESSAGE,
     APPROVAL_CUSTOM_CONTRACT,
 } ui_approval_blue_state_t;
@@ -838,6 +840,26 @@ const char *const ui_approval_blue_details_name[][7] = {
         "CONFIRM TRANSACTION",
         "Claim Rewards",
     },
+    /*APPROVAL_DELEGATE_RESOURCE_TRANSACTION*/
+    {
+        "GAIN",
+        "AMOUNT",
+        "TO",
+        "FROM",
+        "LOCK",
+        "CONFIRM TRANSACTION",
+        "Delegate Resource",
+    },
+    /*APPROVAL_UNDELEGATE_RESOURCE_TRANSACTION*/
+    {
+        "GAIN",
+        "AMOUNT",
+        "TO",
+        "FROM",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Undelegate Resource",
+    },
     /*APPROVAL_SIGN_PERSONAL_MESSAGE*/
     {
         "HASH",
@@ -857,6 +879,16 @@ const char *const ui_approval_blue_details_name[][7] = {
         "FROM",
         "CONFIRM TRANSACTION",
         "Custom Contract",
+    },
+    /*APPROVAL_DELEGATE_RESOURCE*/
+    {
+        "GAIN",
+        "AMOUNT",
+        "TO",
+        "FROM",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Delegate TRX",
     },
 };
 
@@ -1472,6 +1504,46 @@ void ui_approval_unfreeze_transaction_blue_init(void) {
     ui_approval_blue_values[0] = (const char*)fullContract;
     ui_approval_blue_values[1] = (const char*)toAddress;
     ui_approval_blue_values[2] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_unfreeze_transaction_v2_blue_init(void) {
+    // wipe all cases
+    memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)toAddress;
+    ui_approval_blue_values[3] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_delegate_resource_blue_init(void) {
+    // wipe all cases
+    memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)G_io_apdu_buffer + 100;
+    ui_approval_blue_values[3] = (const char*)toAddress;
+    ui_approval_blue_values[4] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_undelegate_resource_blue_init(void) {
+    // wipe all cases
+    memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)toAddress;
+    ui_approval_blue_values[3] = (const char*)fromAddress;
     ui_approval_blue_init();
 }
 
@@ -2206,6 +2278,13 @@ UX_STEP_NOCB(
       .title = "Delegated To",
       .text = toAddress,
     });
+UX_STEP_NOCB(
+    ux_approval_unfreeze_flow_show_amount_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = (char *) G_io_apdu_buffer,
+    });
 
 UX_DEF(ux_approval_unfreeze_flow,
   &ux_approval_unfreeze_flow_1_step,
@@ -2222,6 +2301,152 @@ UX_DEF(ux_approval_unfreeze_data_warning_flow,
   &ux_approval_unfreeze_flow_2_step,
   &ux_approval_unfreeze_flow_3_step,
   &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+UX_DEF(ux_approval_unfreeze_v2_flow,
+  &ux_approval_unfreeze_flow_1_step,
+  &ux_approval_unfreeze_flow_2_step,
+  &ux_approval_unfreeze_flow_show_amount_step,
+  &ux_approval_unfreeze_flow_3_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+UX_DEF(ux_approval_unfreeze_v2_data_warning_flow,
+  &ux_approval_unfreeze_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_unfreeze_flow_2_step,
+  &ux_approval_unfreeze_flow_show_amount_step,
+  &ux_approval_unfreeze_flow_3_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+// DELEGATE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_delegate_resource_flow_review_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "Delegate",
+    });
+UX_STEP_NOCB(
+    ux_approval_delegate_resource_flow_resource_step,
+    bnnn_paging,
+    {
+      .title = "Resource",
+      .text = (const char *)fullContract
+    });
+UX_STEP_NOCB(
+    ux_approval_delegate_flow_show_amount_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = (char *) G_io_apdu_buffer,
+    });
+UX_STEP_NOCB(
+    ux_approval_delegate_resource_flow_check_lock_step,
+    bnnn_paging,
+    {
+      .title = "Is Lock",
+      .text = (const char *)G_io_apdu_buffer + 100,
+    });
+
+UX_STEP_NOCB(
+    ux_approval_delegate_resource_flow_delegate_to_step,
+    bnnn_paging,
+    {
+      .title = "Delegate To",
+      .text = toAddress,
+    });
+
+UX_DEF(ux_approval_delegate_resource_data_warning_flow,
+  &ux_approval_delegate_resource_flow_review_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_delegate_resource_flow_resource_step,
+  &ux_approval_delegate_flow_show_amount_step,
+  &ux_approval_delegate_resource_flow_check_lock_step,
+  &ux_approval_delegate_resource_flow_delegate_to_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+UX_DEF(ux_approval_delegate_resource_flow,
+  &ux_approval_delegate_resource_flow_review_step,
+  &ux_approval_delegate_resource_flow_resource_step,
+  &ux_approval_delegate_flow_show_amount_step,
+  &ux_approval_delegate_resource_flow_check_lock_step,
+  &ux_approval_delegate_resource_flow_delegate_to_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+// UNDELEGATE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_undelegate_resource_flow_review_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "Undelegate",
+    });
+UX_STEP_NOCB(
+    ux_approval_undelegate_resource_flow_resource_step,
+    bnnn_paging,
+    {
+      .title = "Resource",
+      .text = (const char *)fullContract
+    });
+UX_STEP_NOCB(
+    ux_approval_undelegate_flow_show_amount_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = (char *) G_io_apdu_buffer,
+    });
+
+UX_STEP_NOCB(
+    ux_approval_undelegate_resource_flow_undelegate_to_step,
+    bnnn_paging,
+    {
+      .title = "Undelegate To",
+      .text = fromAddress,
+    });
+
+UX_STEP_NOCB(
+    ux_approval_undelegate_resource_flow_undelegate_from_step,
+    bnnn_paging,
+    {
+      .title = "Undelegate From",
+      .text = toAddress,
+    });
+
+UX_DEF(ux_approval_undelegate_resource_data_warning_flow,
+  &ux_approval_undelegate_resource_flow_review_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_undelegate_resource_flow_resource_step,
+  &ux_approval_undelegate_flow_show_amount_step,
+  &ux_approval_undelegate_resource_flow_undelegate_to_step,
+  &ux_approval_undelegate_resource_flow_undelegate_from_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+UX_DEF(ux_approval_undelegate_resource_flow,
+  &ux_approval_undelegate_resource_flow_review_step,
+  &ux_approval_undelegate_resource_flow_resource_step,
+  &ux_approval_undelegate_flow_show_amount_step,
+  &ux_approval_undelegate_resource_flow_undelegate_to_step,
+  &ux_approval_undelegate_resource_flow_undelegate_from_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -2524,7 +2749,7 @@ UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     {
       &C_icon_warning,
       "Warning:",
-      "Custom Contract",
+      "Unverified Contract",
     });
 
 UX_DEF(ux_approval_custom_contract_flow,
@@ -3217,6 +3442,86 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(HAVE_UX_FLOW)
                 ux_flow_init(0,
                      ((txContent.dataBytes>0)? ux_approval_unfreeze_data_warning_flow : ux_approval_unfreeze_flow),
+                     NULL);
+            #endif // #if TARGET_ID
+        break;
+        case FREEZEBALANCEV2CONTRACT: // Freeze TRX
+            if (txContent.resource == 0)
+                strcpy(fullContract, "Bandwidth");
+            else
+                strcpy(fullContract, "Energy");
+
+            print_amount(txContent.amount[0], (char *) G_io_apdu_buffer, 100, SUN_DIG);
+            getBase58FromAddress(txContent.account,
+                (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
+            
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
+                ui_approval_freeze_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
+                     NULL);
+            #endif // #if TARGET_ID
+        break;
+        case UNFREEZEBALANCEV2CONTRACT: // unreeze TRX
+            if (txContent.resource == 0)
+                strcpy(fullContract, "Bandwidth");
+            else
+                strcpy(fullContract, "Energy");
+
+            print_amount(txContent.amount[0], (char *) G_io_apdu_buffer, 100, SUN_DIG);
+            getBase58FromAddress(txContent.account,
+                (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
+
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_UNFREEZEASSET_TRANSACTION;
+                ui_approval_unfreeze_transaction_v2_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_unfreeze_v2_data_warning_flow : ux_approval_unfreeze_v2_flow),
+                     NULL);
+            #endif // #if TARGET_ID
+        break;
+        case DELEGATERESOURCECONTRACT: // Delegate resource
+            if (txContent.resource == 0)
+                strcpy(fullContract, "Bandwidth");
+            else
+                strcpy(fullContract, "Energy");
+
+            if (txContent.customData == 0) {
+                strlcpy(G_io_apdu_buffer + 100, "False", sizeof(G_io_apdu_buffer) - 100);
+            } else {
+                strlcpy(G_io_apdu_buffer + 100, "True", sizeof(G_io_apdu_buffer) - 100);
+            }
+
+            print_amount(txContent.amount[0], (char *) G_io_apdu_buffer, 100, SUN_DIG);
+            getBase58FromAddress(txContent.destination,
+                (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_DELEGATE_RESOURCE_TRANSACTION;
+                ui_approval_delegate_resource_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_delegate_resource_data_warning_flow : ux_approval_delegate_resource_flow),
+                     NULL);
+            #endif // #if TARGET_ID
+        break;
+        case UNDELEGATERESOURCECONTRACT: // Undelegate resource
+            if (txContent.resource == 0)
+                strcpy(fullContract, "Bandwidth");
+            else
+                strcpy(fullContract, "Energy");
+
+            print_amount(txContent.amount[0], (char *) G_io_apdu_buffer, 100, SUN_DIG);
+            getBase58FromAddress(txContent.destination,
+                (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_UNDELEGATE_RESOURCE_TRANSACTION;
+                ui_approval_undelegate_resource_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_undelegate_resource_data_warning_flow : ux_approval_undelegate_resource_flow),
                      NULL);
             #endif // #if TARGET_ID
         break;
