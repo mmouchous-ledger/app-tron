@@ -880,16 +880,6 @@ const char *const ui_approval_blue_details_name[][7] = {
         "CONFIRM TRANSACTION",
         "Custom Contract",
     },
-    /*APPROVAL_DELEGATE_RESOURCE*/
-    {
-        "GAIN",
-        "AMOUNT",
-        "TO",
-        "FROM",
-        NULL,
-        "CONFIRM TRANSACTION",
-        "Delegate TRX",
-    },
 };
 
 const bagl_element_t *ui_approval_common_show_details(unsigned int detailidx) {
@@ -1544,6 +1534,16 @@ void ui_approval_undelegate_resource_blue_init(void) {
     ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
     ui_approval_blue_values[2] = (const char*)toAddress;
     ui_approval_blue_values[3] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_withdraw_expire_unfreeze_blue_init(void) {
+    // wipe all cases
+    memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_cancel;
+    ui_approval_blue_values[0] = (const char*)fromAddress;
     ui_approval_blue_init();
 }
 
@@ -2451,6 +2451,33 @@ UX_DEF(ux_approval_undelegate_resource_flow,
   &ux_approval_reject_step
 );
 
+// WITHDRAW EXPIRE UNFREEZE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_withdraw_expire_unfreeze_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Withdraw",
+      "Unfreeze",
+    });
+
+UX_DEF(ux_approval_withdraw_expire_unfreeze_flow,
+  &ux_approval_withdraw_expire_unfreeze_flow_1_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+UX_DEF(ux_approval_withdraw_expire_unfreeze_data_warning_flow,
+  &ux_approval_withdraw_expire_unfreeze_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+
 
 // WITHDRAW BALANCE TRANSACTION
 //////////////////////////////////////////////////////////////////////
@@ -2749,7 +2776,7 @@ UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     {
       &C_icon_warning,
       "Warning:",
-      "Unverified Contract",
+      "Custom Contract",
     });
 
 UX_DEF(ux_approval_custom_contract_flow,
@@ -3522,6 +3549,19 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(HAVE_UX_FLOW)
                 ux_flow_init(0,
                      ((txContent.dataBytes>0)? ux_approval_undelegate_resource_data_warning_flow : ux_approval_undelegate_resource_flow),
+                     NULL);
+            #endif // #if TARGET_ID
+        break;
+        case WITHDRAWEXPIREUNFREEZECONTRACT: // Withdraw Expire Unfreeze
+            getBase58FromAddress(txContent.account,
+                (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
+
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_WITHDRAWBALANCE_TRANSACTION;
+                ui_approval_withdraw_expire_unfreeze_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_withdraw_expire_unfreeze_data_warning_flow : ux_approval_withdraw_expire_unfreeze_flow),
                      NULL);
             #endif // #if TARGET_ID
         break;

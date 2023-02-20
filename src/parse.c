@@ -470,6 +470,17 @@ static bool unfreeze_balance_v2_contract(txContent_t *content,
   return true;
 }
 
+static bool withdraw_expire_unfreeze_contract(txContent_t *content,
+                                      pb_istream_t *stream) {
+  if (!pb_decode(stream, protocol_WithdrawExpireUnfreezeContract_fields,
+                 &msg.withdraw_expire_unfreeze_contract)) {
+    return false;
+  }
+  COPY_ADDRESS(content->account, &msg.withdraw_expire_unfreeze_contract.owner_address);
+  return true;
+}
+
+
 static bool delegate_resource_contract(txContent_t *content,
                                       pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_DelegateResourceContract_fields,
@@ -830,6 +841,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
         break;
       case protocol_Transaction_Contract_ContractType_UnfreezeBalanceV2Contract:
         ret = unfreeze_balance_v2_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_WithdrawExpireUnfreezeContract:
+        ret = withdraw_expire_unfreeze_contract(content, &tx_stream);
         break;
       case protocol_Transaction_Contract_ContractType_DelegateResourceContract:
         ret = delegate_resource_contract(content, &tx_stream);
